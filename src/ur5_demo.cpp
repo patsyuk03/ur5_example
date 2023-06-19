@@ -1,6 +1,4 @@
 #include <rclcpp/rclcpp.hpp>
-// #include <moveit/moveit_cpp/moveit_cpp.h>
-// #include <moveit/moveit_cpp/planning_component.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
@@ -21,35 +19,20 @@ int main(int argc, char * argv[])
     RCLCPP_INFO(LOGGER, "Created executor");
 
     static const std::string PLANNING_GROUP = "ur_manipulator";
-
     moveit::planning_interface::MoveGroupInterface move_group(node, PLANNING_GROUP);
     moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-
     const moveit::core::JointModelGroup* joint_model_group =
       move_group.getCurrentState()->getJointModelGroup(PLANNING_GROUP);
-    // We can print the name of the reference frame for this robot.
-    RCLCPP_INFO(LOGGER, "Planning frame: %s", move_group.getPlanningFrame().c_str());
 
-    // We can also print the name of the end-effector link for this group.
+    RCLCPP_INFO(LOGGER, "Planning frame: %s", move_group.getPlanningFrame().c_str());
     RCLCPP_INFO(LOGGER, "End effector link: %s", move_group.getEndEffectorLink().c_str());
 
-    // We can get a list of all the groups in the robot:
-    RCLCPP_INFO(LOGGER, "Available Planning Groups:");
-    std::copy(move_group.getJointModelGroupNames().begin(), move_group.getJointModelGroupNames().end(),
-            std::ostream_iterator<std::string>(std::cout, ", "));
-
-    // using moveit::planning_interface::MoveGroupInterface;
-    // auto move_group = MoveGroupInterface(node, "ur_manipulator");
-
-    // planning_components->setStartStateToCurrentState();
-    // RCLCPP_INFO(LOGGER, "setStartStateToCurrentState");
-
-    geometry_msgs::msg::PoseStamped target_pose1;
-    target_pose1.header.frame_id = "base_link";
-    target_pose1.pose.orientation.w = 1.0;
-    target_pose1.pose.position.x = 0.28;
-    target_pose1.pose.position.y = -0.2;
-    target_pose1.pose.position.z = 0.5;
+// Move to the object
+    geometry_msgs::msg::Pose target_pose1;
+    target_pose1.orientation.w = 1.0;
+    target_pose1.position.x = 0.28;
+    target_pose1.position.y = -0.2;
+    target_pose1.position.z = 0.5;
     move_group.setPoseTarget(target_pose1, "tool0");
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
     bool success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
@@ -57,49 +40,52 @@ int main(int argc, char * argv[])
     {
         move_group.execute(my_plan);
     }
+    RCLCPP_INFO(LOGGER, "Visualizing plan 1 (pose goal) %s", success ? "" : "FAILED");\
 
+// Pick the object
+    std::vector<geometry_msgs::msg::Pose> waypoints;
+    waypoints.push_back(target_pose1);
+    target_pose1.position.z -= 0.2;
+    waypoints.push_back(target_pose1);  // down
+    target_pose1.position.z += 0.2;
+    waypoints.push_back(target_pose1);  // up
+    moveit_msgs::msg::RobotTrajectory trajectory;
+    const double jump_threshold = 0.0;
+    const double eef_step = 0.01;
+    double fraction = move_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    RCLCPP_INFO(LOGGER, "Visualizing plan 2 (Cartesian path) (%.2f%% acheived)", fraction * 100.0);
+
+// Move the object
     moveit::core::RobotState start_state(*move_group.getCurrentState());
     moveit::core::RobotStatePtr current_state = move_group.getCurrentState(10);
     std::vector<double> joint_group_positions;
     current_state->copyJointGroupPositions(joint_model_group, joint_group_positions);
-    joint_group_positions[0] += 1.0;  // radians
+    joint_group_positions[0] += 2.0;
     move_group.setJointValueTarget(joint_group_positions);
-
     success = (move_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if (success)
     {
         move_group.execute(my_plan);
     }
+    RCLCPP_INFO(LOGGER, "Visualizing plan 3 (joint space goal) %s", success ? "" : "FAILED");
 
-    // const moveit::core::JointModelGroup* joint_model_group =
-    //     move_group.getCurrentState()->getJointModelGroup("ur_manipulator");
-    // moveit::core::RobotStatePtr current_state = move_group.getCurrentState(10);
-    // geometry_msgs::msg::PoseStamped current_pose = move_group.getCurrentPose();
-    // geometry_msgs::msg::Pose target_pose = current_pose.pose;
-    // target_pose.position.x = 0.3;
-    // target_pose.position.z = 0.5;
-    // move_group.setPoseTarget(target_pose);
-    // bool success = static_cast<bool>(move_group.plan(plan));
-    // if(success) {
-    //     move_group.execute(plan);
-    // } else {
-    //     RCLCPP_ERROR(logger, "Planing failed!");
-    // }
-
-    // std::vector<double> joint_values = move_group.getCurrentJointValues();
-    // std::vector<double> joint_values;
-    // current_state->copyJointGroupPositions(joint_model_group, joint_values);
-    // RCLCPP_INFO(logger, "Joint state:%f", joint_values[0]);
-    // joint_values[0] += 1;
-    // move_group.setJointValueTarget(joint_values);
-    // moveit::planning_interface::MoveGroupInterface::Plan plan;
-    // bool success = static_cast<bool>(move_group.plan(plan));
-    // if(success) {
-    //     move_group.execute(plan);
-    // } else {
-    //     RCLCPP_ERROR(logger, "Planing failed!");
-    // }
-
+// Place the object
+    geometry_msgs::msg::PoseStamped current_pose;
+    current_pose = move_group.getCurrentPose();
+    RCLCPP_INFO(LOGGER, "Current pose x: %f", current_pose.pose.position.x);
+    RCLCPP_INFO(LOGGER, "Current pose y: %f", current_pose.pose.position.y);
+    RCLCPP_INFO(LOGGER, "Current pose z: %f", current_pose.pose.position.z);
+    waypoints.clear();
+    target_pose1.position.x = current_pose.pose.position.x;
+    target_pose1.position.y = current_pose.pose.position.y;
+    target_pose1.position.z = current_pose.pose.position.z;
+    waypoints.push_back(target_pose1);
+    target_pose1.position.z -= 0.2;
+    waypoints.push_back(target_pose1);  // down
+    target_pose1.position.z += 0.2;
+    waypoints.push_back(target_pose1);  // up
+    fraction = move_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    RCLCPP_INFO(LOGGER, "Visualizing plan 4 (Cartesian path) (%.2f%% acheived)", fraction * 100.0);
 
     rclcpp::shutdown();
     return 0;
