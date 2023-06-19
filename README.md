@@ -11,3 +11,6 @@ sudo apt-get install ros-foxy-ur-robot-driver
 ```bash
 ros2 launch ur5_example demo.launch.py [ur_type:=ur5] [robot_ip:=yyy.yyy.yyy.yyy] [use_fake_hardware:=true]
 ```
+## Video
+[Fake UR5 Demo](https://drive.google.com/file/d/1nLHYhd_WZ5f-bM-RubpxMBOtdzch6dja/view?usp=sharing)
+Real UR5 Demo
