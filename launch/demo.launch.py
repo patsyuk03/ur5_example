@@ -27,14 +27,14 @@ def generate_launch_description():
             'use_fake_hardware': use_fake_hardware,
         }.items()
     ))
-    # ld.add_action(IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(
-    #         os.path.join(get_package_share_directory('ur5_example'), 'launch/pnp_node.launch.py')
-    #     ),
-    #     launch_arguments={
-    #         'ur_type': ur_type,
-    #         'robot_ip': robot_ip,
-    #         'use_fake_hardware': use_fake_hardware,
-    #     }.items()
-    # ))
+    ld.add_action(IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('ur5_example'), 'launch/pnp_node.launch.py')
+        ),
+        launch_arguments={
+            'ur_type': ur_type,
+            'robot_ip': robot_ip,
+            'use_fake_hardware': use_fake_hardware,
+        }.items()
+    ))
     return ld
