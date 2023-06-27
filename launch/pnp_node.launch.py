@@ -21,7 +21,7 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     ld.add_action(DeclareLaunchArgument("ur_type", default_value="ur5"))
-    ld.add_action(DeclareLaunchArgument("robot_ip", default_value="yyy.yyy.yyy.yyy"))
+    ld.add_action(DeclareLaunchArgument("robot_ip", default_value="xxx.xxx.x.xxx"))
     ld.add_action(DeclareLaunchArgument("use_fake_hardware", default_value="true"))
 
     ur_type = LaunchConfiguration("ur_type")
@@ -55,16 +55,13 @@ def generate_launch_description():
             PathJoinSubstitution([FindPackageShare("ur_moveit_config"), "srdf", "ur.srdf.xacro"])," ",
             "name:=","ur"," ",
         ])
-    kinematics_yaml = load_yaml("ur_moveit_config", "config/kinematics.yaml")
 
     ld.add_action(Node(
         package="ur5_example",
         executable="ur5_demo",
         output="screen",
         parameters=[{"robot_description": robot_description},
-                    {"robot_description_semantic": robot_description_semantic},
-                    {"robot_description_kinematics": kinematics_yaml},
-                    {"use_sim_time": True}],   
+                    {"robot_description_semantic": robot_description_semantic}],   
     ))
 
     return ld
